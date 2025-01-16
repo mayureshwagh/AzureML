@@ -1,0 +1,120 @@
+{
+  "cells": [
+    {
+      "cell_type": "code",
+      "source": [
+        "import azureml.core\n",
+        "from azureml.core import Workspace\n",
+        "from azureml.core import Experiment\n",
+        "from azureml.core import Model, Dataset\n",
+        "from azureml.data.datapath import DataPath\n",
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "import joblib\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "from sklearn.tree import DecisionTreeClassifier\n",
+        "from sklearn.metrics import roc_auc_score\n",
+        "from sklearn.metrics import roc_curve\n",
+        "\n",
+        "# Load the workspace from the saved config file\n",
+        "ws = Workspace.from_config()\n",
+        "print('Ready to use Azure ML {} to work with {}'.format(azureml.core.VERSION, ws.name))"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": "Ready to use Azure ML 1.57.0 to work with azuremlws\n"
+        }
+      ],
+      "execution_count": 1,
+      "metadata": {
+        "gather": {
+          "logged": 1737051747238
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "datastore = ws.get_default_datastore()\n",
+        "datastore.upload_files(['Users/mwagh9136/AzureML/diabetes.csv'], target_path='diabetes_data/')\n",
+        "\n",
+        "\n",
+        "datastore_path = 'diabetes_data/diabetes.csv'\n",
+        "datapath = DataPath(datastore, datastore_path)\n",
+        "ds = Dataset.Tabular.from_delimited_files(path = datapath)\n",
+        "\n",
+        "ds = ds.register(\n",
+        "    workspace = ws,\n",
+        "    name = 'DIABETES',\n",
+        "    description = 'diabetes classification',\n",
+        "    create_new_version = True\n",
+        ")\n",
+        "\n",
+        "ds.name"
+      ],
+      "outputs": [
+        {
+          "output_type": "error",
+          "ename": "UserErrorException",
+          "evalue": "UserErrorException:\n\tMessage: 'U' does not point to a file. Please upload the file to cloud first if running in a cloud notebook.\n\tInnerException None\n\tErrorResponse \n{\n    \"error\": {\n        \"code\": \"UserError\",\n        \"message\": \"'U' does not point to a file. Please upload the file to cloud first if running in a cloud notebook.\"\n    }\n}",
+          "traceback": [
+            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+            "\u001b[0;31mUserErrorException\u001b[0m                        Traceback (most recent call last)",
+            "Cell \u001b[0;32mIn[4], line 2\u001b[0m\n\u001b[1;32m      1\u001b[0m datastore \u001b[38;5;241m=\u001b[39m ws\u001b[38;5;241m.\u001b[39mget_default_datastore()\n\u001b[0;32m----> 2\u001b[0m \u001b[43mdatastore\u001b[49m\u001b[38;5;241;43m.\u001b[39;49m\u001b[43mupload_files\u001b[49m\u001b[43m(\u001b[49m\u001b[38;5;124;43m'\u001b[39;49m\u001b[38;5;124;43mUsers/mwagh9136/AzureML/diabetes.csv\u001b[39;49m\u001b[38;5;124;43m'\u001b[39;49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[43mtarget_path\u001b[49m\u001b[38;5;241;43m=\u001b[39;49m\u001b[38;5;124;43m'\u001b[39;49m\u001b[38;5;124;43mdiabetes_data/\u001b[39;49m\u001b[38;5;124;43m'\u001b[39;49m\u001b[43m)\u001b[49m\n\u001b[1;32m      5\u001b[0m datastore_path \u001b[38;5;241m=\u001b[39m \u001b[38;5;124m'\u001b[39m\u001b[38;5;124mdiabetes_data/diabetes.csv\u001b[39m\u001b[38;5;124m'\u001b[39m\n\u001b[1;32m      6\u001b[0m datapath \u001b[38;5;241m=\u001b[39m DataPath(datastore, datastore_path)\n",
+            "File \u001b[0;32m/anaconda/envs/azureml_py310_sdkv2/lib/python3.10/site-packages/azureml/data/_dataset_deprecation.py:26\u001b[0m, in \u001b[0;36mdeprecated.<locals>.monitor.<locals>.wrapper\u001b[0;34m(*args, **kwargs)\u001b[0m\n\u001b[1;32m     24\u001b[0m     _warn_deprecation(target, replacement)  \u001b[38;5;66;03m# only raise warning for top-level invocation\u001b[39;00m\n\u001b[1;32m     25\u001b[0m     _warning_silenced_for \u001b[38;5;241m=\u001b[39m target\n\u001b[0;32m---> 26\u001b[0m result \u001b[38;5;241m=\u001b[39m \u001b[43mfunc\u001b[49m\u001b[43m(\u001b[49m\u001b[38;5;241;43m*\u001b[39;49m\u001b[43margs\u001b[49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[38;5;241;43m*\u001b[39;49m\u001b[38;5;241;43m*\u001b[39;49m\u001b[43mkwargs\u001b[49m\u001b[43m)\u001b[49m\n\u001b[1;32m     27\u001b[0m \u001b[38;5;28;01mif\u001b[39;00m _warning_silenced_for \u001b[38;5;241m==\u001b[39m target:\n\u001b[1;32m     28\u001b[0m     _warning_silenced_for \u001b[38;5;241m=\u001b[39m \u001b[38;5;28;01mNone\u001b[39;00m\n",
+            "File \u001b[0;32m/anaconda/envs/azureml_py310_sdkv2/lib/python3.10/site-packages/azureml/data/azure_storage_datastore.py:978\u001b[0m, in \u001b[0;36mAzureBlobDatastore.upload_files\u001b[0;34m(self, files, relative_root, target_path, overwrite, show_progress)\u001b[0m\n\u001b[1;32m    975\u001b[0m target_path \u001b[38;5;241m=\u001b[39m target_path \u001b[38;5;129;01mor\u001b[39;00m \u001b[38;5;124m\"\u001b[39m\u001b[38;5;124m\"\u001b[39m\n\u001b[1;32m    976\u001b[0m relative_root \u001b[38;5;241m=\u001b[39m relative_root \u001b[38;5;129;01mor\u001b[39;00m common_path(files)\n\u001b[1;32m    977\u001b[0m count \u001b[38;5;241m=\u001b[39m \u001b[38;5;28mself\u001b[39m\u001b[38;5;241m.\u001b[39m_start_upload_task(\n\u001b[0;32m--> 978\u001b[0m     \u001b[38;5;28;43mself\u001b[39;49m\u001b[38;5;241;43m.\u001b[39;49m\u001b[43m_get_upload_from_files\u001b[49m\u001b[43m(\u001b[49m\u001b[43mfiles\u001b[49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[43mtarget_path\u001b[49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[43mrelative_root\u001b[49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[38;5;28;43;01mFalse\u001b[39;49;00m\u001b[43m)\u001b[49m,\n\u001b[1;32m    979\u001b[0m     overwrite,\n\u001b[1;32m    980\u001b[0m     \u001b[38;5;28;01mlambda\u001b[39;00m target_file_path: \u001b[38;5;28mself\u001b[39m\u001b[38;5;241m.\u001b[39mblob_service\u001b[38;5;241m.\u001b[39mget_blob_client(\n\u001b[1;32m    981\u001b[0m         container\u001b[38;5;241m=\u001b[39m\u001b[38;5;28mself\u001b[39m\u001b[38;5;241m.\u001b[39mcontainer_name,\n\u001b[1;32m    982\u001b[0m         blob\u001b[38;5;241m=\u001b[39mtarget_file_path\n\u001b[1;32m    983\u001b[0m     )\u001b[38;5;241m.\u001b[39mexists(),\n\u001b[1;32m    984\u001b[0m     show_progress,\n\u001b[1;32m    985\u001b[0m     \u001b[38;5;28;01mlambda\u001b[39;00m target, source: \u001b[38;5;28;01mlambda\u001b[39;00m: [\n\u001b[1;32m    986\u001b[0m         (\u001b[38;5;28mself\u001b[39m\u001b[38;5;241m.\u001b[39mblob_service\u001b[38;5;241m.\u001b[39mget_blob_client(\n\u001b[1;32m    987\u001b[0m             container\u001b[38;5;241m=\u001b[39m\u001b[38;5;28mself\u001b[39m\u001b[38;5;241m.\u001b[39mcontainer_name,\n\u001b[1;32m    988\u001b[0m             blob\u001b[38;5;241m=\u001b[39mtarget\n\u001b[1;32m    989\u001b[0m         )\u001b[38;5;241m.\u001b[39mupload_blob(\n\u001b[1;32m    990\u001b[0m             f, blob_type\u001b[38;5;241m=\u001b[39m\u001b[38;5;124m\"\u001b[39m\u001b[38;5;124mBlockBlob\u001b[39m\u001b[38;5;124m\"\u001b[39m, overwrite\u001b[38;5;241m=\u001b[39moverwrite\n\u001b[1;32m    991\u001b[0m         ), f\u001b[38;5;241m.\u001b[39mclose()) \u001b[38;5;28;01mfor\u001b[39;00m f \u001b[38;5;129;01min\u001b[39;00m [\u001b[38;5;28mopen\u001b[39m(source, \u001b[38;5;124m'\u001b[39m\u001b[38;5;124mrb\u001b[39m\u001b[38;5;124m'\u001b[39m)]\n\u001b[1;32m    992\u001b[0m     ][\u001b[38;5;241m0\u001b[39m][\u001b[38;5;241m0\u001b[39m]\n\u001b[1;32m    993\u001b[0m )\n\u001b[1;32m    994\u001b[0m module_logger\u001b[38;5;241m.\u001b[39minfo(\u001b[38;5;124m\"\u001b[39m\u001b[38;5;124mFinished AzureBlobDatastore.upload with count=\u001b[39m\u001b[38;5;132;01m{0}\u001b[39;00m\u001b[38;5;124m.\u001b[39m\u001b[38;5;124m\"\u001b[39m\u001b[38;5;241m.\u001b[39mformat(count))\n\u001b[1;32m    995\u001b[0m \u001b[38;5;28;01mreturn\u001b[39;00m DataReference(datastore\u001b[38;5;241m=\u001b[39m\u001b[38;5;28mself\u001b[39m, path_on_datastore\u001b[38;5;241m=\u001b[39mtarget_path)\n",
+            "File \u001b[0;32m/anaconda/envs/azureml_py310_sdkv2/lib/python3.10/site-packages/azureml/data/azure_storage_datastore.py:293\u001b[0m, in \u001b[0;36mAbstractAzureStorageDatastore._get_upload_from_files\u001b[0;34m(self, file_paths, target_path, relative_root, skip_root_check)\u001b[0m\n\u001b[1;32m    290\u001b[0m \u001b[38;5;28;01mif\u001b[39;00m \u001b[38;5;129;01mnot\u001b[39;00m os\u001b[38;5;241m.\u001b[39mpath\u001b[38;5;241m.\u001b[39misfile(file_path):\n\u001b[1;32m    291\u001b[0m     err_msg \u001b[38;5;241m=\u001b[39m \u001b[38;5;124m\"\u001b[39m\u001b[38;5;124m'\u001b[39m\u001b[38;5;132;01m{}\u001b[39;00m\u001b[38;5;124m'\u001b[39m\u001b[38;5;124m does not point to a file. \u001b[39m\u001b[38;5;124m\"\u001b[39m \u001b[38;5;241m+\u001b[39m \\\n\u001b[1;32m    292\u001b[0m         \u001b[38;5;124m\"\u001b[39m\u001b[38;5;124mPlease upload the file to cloud first if running in a cloud notebook.\u001b[39m\u001b[38;5;124m\"\u001b[39m\n\u001b[0;32m--> 293\u001b[0m     \u001b[38;5;28;01mraise\u001b[39;00m UserErrorException(err_msg\u001b[38;5;241m.\u001b[39mformat(file_path))\n\u001b[1;32m    295\u001b[0m target_file_path \u001b[38;5;241m=\u001b[39m to_unix_path(file_path)\n\u001b[1;32m    296\u001b[0m \u001b[38;5;28;01mif\u001b[39;00m relative_root \u001b[38;5;241m!=\u001b[39m \u001b[38;5;124m\"\u001b[39m\u001b[38;5;124m/\u001b[39m\u001b[38;5;124m\"\u001b[39m:\n\u001b[1;32m    297\u001b[0m     \u001b[38;5;66;03m# need to do this because Windows doesn't support relpath if the partition is different\u001b[39;00m\n",
+            "\u001b[0;31mUserErrorException\u001b[0m: UserErrorException:\n\tMessage: 'U' does not point to a file. Please upload the file to cloud first if running in a cloud notebook.\n\tInnerException None\n\tErrorResponse \n{\n    \"error\": {\n        \"code\": \"UserError\",\n        \"message\": \"'U' does not point to a file. Please upload the file to cloud first if running in a cloud notebook.\"\n    }\n}"
+          ]
+        }
+      ],
+      "execution_count": 4,
+      "metadata": {
+        "gather": {
+          "logged": 1737051829327
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "name": "python310-sdkv2",
+      "language": "python",
+      "display_name": "Python 3.10 - SDK v2"
+    },
+    "language_info": {
+      "name": "python",
+      "version": "3.10.14",
+      "mimetype": "text/x-python",
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "pygments_lexer": "ipython3",
+      "nbconvert_exporter": "python",
+      "file_extension": ".py"
+    },
+    "microsoft": {
+      "ms_spell_check": {
+        "ms_spell_check_language": "en"
+      }
+    },
+    "kernel_info": {
+      "name": "python310-sdkv2"
+    },
+    "nteract": {
+      "version": "nteract-front-end@1.0.0"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 2
+}
